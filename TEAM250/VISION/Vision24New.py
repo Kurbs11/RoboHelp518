@@ -36,6 +36,27 @@ SWEETSPOT = np.array([0.0, 0.0, 0.0])
 
 TAG_LOCATION=[(-99,-99,-99),(593.68,9.68,53.38),(637.21,34.79,53.38),(652.73,196.17,57.13),(652.73,218.42,57.13),(578.77,323.00,53.38),(72.50,323.00,53.38),(1.50,218.42,57.13),(1.50,196.17,57.13),(14.02,34.79,53.38),(57.54,9.68,53.38),(468.69,146.19,52.00),(468.69,177.10,52.00),(441.74,161.62,52.00),(209.48,161.62,52.00),(182.73,177.10,52.00),(182.73,146.19,52.00)]
 BEARINGS=[(-99.0,-99.0)]*17
+Red_Tags = [3,4,5,9,10,11,12,13]
+Blue_Tags = [1,2,6,7,8,14,15,16]
+ID_to_Game_Element = { #L/R Based on if camera is looking at the object
+    1: "Blue Source Right",
+    2: "Blue Source Left",
+    3: "Red Speaker Right",
+    4: "Red Speaker Middle",
+    5: "Red Amp",
+    6: "Blue Amp",
+    7: "Blue Speaker Middle",
+    8: "Blue Speaker Left",
+    9: "Red Source Right",
+    10 : "Red Source Left",
+    11: "Red Stage Left",
+    12: "Red Stage Right",
+    13: "Red Center Stage",
+    14: "Blue Center Stage",
+    15: "Blue Stage Left",
+    16: "Blue Stage Right"
+}
+
 
 options  = apriltag.DetectorOptions(
            families="tag36h11"
@@ -76,9 +97,17 @@ class Tag(object, id) :
     def __init__(self, id):
 
         self.Tagid = id
-        self.tagtable = ntinst.getTable("Tag_{:02d}".format(id))
-        self.Hdg = self.tagtable.getDoubleTopic("Hdg").publish()
-        self.Rng = self.tagtable.getDoubleTopic("Rng").publish()
+        self.tagtable = ntinst.getTable("Tag_{:02d}".format(id)) #Concern is that these values aren't being adjusted
+        self.config_Rng = self.tagtable.getDoubleTopic("Rng").publish()
+        self.config_Hdg = self.tagtable.getDoubleTopic("Hdg").publish()
+        self.Rng = 1 #default number (placeholder)
+        self.Hdg = 1
+    def update_Rng(self,new_Rng): 
+        self.Rng = new_Rng #Updates the value 
+        self.config_Rng.set(self.Rng) # Updates the network table with the new value (Should make pushData() defunct)
+    def update_Hdg(self,new_Hdg):
+        self.Hdg = new_Hdg
+        self.config_Hdg.set(self.Hdg)
 
 def pushData(TagID,Rng,Hdg):
     if TagID == 1:
@@ -302,7 +331,29 @@ def setTag(tags, tag_id, Hdg, Rng):
             tag.Hdg.set(Hdg)
             tag.Rng.set(Rng)
 
+def new_setTags(tags): #uses the class-based approach
+    placeholder = 1
 
+
+
+def ClosestTag(tags, ID_to_Game_Element, Closest_ID, Closest_Rng):
+    #Import from notebook
+    if len(tags) == 0:
+        Closest_ID.set("None In View") #The assumption is the tables can take in strings
+        Closest_Rng.set(-1) #Obvious garbage value
+        return
+    
+    closest = [] #Will be a 2-element array containing the most recent closest id and its range
+    closest.append(tags[0].Tagid)
+    closest.append(tags[0].Rng)
+    for tag in tags:
+        if tag.Rng < closest[1]:
+            closest[0] = ID_to_Game_Element[tag.Tagid] #Closest location's id is input into dictionary to output the name of the game object 
+            closest[1] = tag.Rng
+    Closest_ID.set(closest[0]) #Updates the network table's location to the new closest one
+    Closest_Rng.set(closest[1])
+
+    return 
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2:
@@ -349,7 +400,8 @@ if __name__ == "__main__":
     input_stream = CameraServer.getVideo()
     output_stream = CameraServer.putVideo('Vision 2024', width, height)
 
-    Tag01_tbl = ntinst.getTable("Tag_01")
+    ##Initialization of network tables for Tags1-16 is now handled in the tag object construction. Requires testing before deletion.
+    Tag01_tbl = ntinst.getTable("Tag_01") #network table instance-> creates the tabel for Tag1
     pub1H = Tag01_tbl.getDoubleTopic("Hdg").publish()
     pub1R = Tag01_tbl.getDoubleTopic("Rng").publish()
 
@@ -413,10 +465,21 @@ if __name__ == "__main__":
     pub16H = Tag16_tbl.getDoubleTopic("Hdg").publish()
     pub16R = Tag16_tbl.getDoubleTopic("Rng").publish()
 
-    #Create 16 tag objects
+    Closest_tag = ntinst.getTable("Closest Tag")
+    Closest_ID = Closest_tag.getDoubleTopic("Location").publish() #Maybe change into actual game element
+    Closest_Rng = Closest_tag.getDoubleTopic("Rng").publish()
+
+
+
+    #Create 16 tag objects (This is an alternative way to the 48 lines of code up above)
     tags = []
     for i in range(16):
-        tags.append(Tag(i+1))
+        current_tag = Tag(i+1)
+        current_tag.Tagid()
+        current_tag.config_Rng() #Configuring the network table slots for current tag's heading and range
+        current_tag.config_Hdg()
+        tags.append(current_tag) #Our tag system goes from 1-16, so this 0-15 loop needs minor offset 
+
 
     # loop forever
     while True:
@@ -425,7 +488,7 @@ if __name__ == "__main__":
         gray       = cv2.cvtColor (input_img, cv2.COLOR_BGR2GRAY)
         results    = detector.detect(gray)
         for r in results:
-            if (r.tag_id in AllTags):
+            if (r.tag_id in AllTags): #If the detected tag is one of the 16 on the field...
                 ret, rvecs, tvecs = cv2.solvePnP(CORNERS-SWEETSPOT,r.corners,USBcam_mtx,USBcam_dist,cv2.SOLVEPNP_IPPE_SQUARE)
                 ZYX,jac     = cv2.Rodrigues(rvecs)
                 #Rng         = cv2.Rodrigues(rvecs)[0]
@@ -433,9 +496,18 @@ if __name__ == "__main__":
                 CamPos      = -np.matrix(ZYX).T * np.matrix(tvecs)
                 CamRange    = (sqrt(CamPos[0]**2+CamPos[1]**2+CamPos[2]**2)-FudgeOffset)/FudgeFactor
                 
-                setTag(tags, r.tag_id, Hdg, CamRange)
+                #setTag(tags, r.tag_id, Hdg, CamRange) #With this new class design, this function should now be unnecessary
+
+                #find the existing tag object with the tag_id in results 
+                current_tag = tags[r.tag_id +1]
+                current_tag.update_Rng(CamRange) #now that update_Rng is a class method, the tag object's Rng variable gets updated
+                current_tag.update_Hdg(Hdg)
                 
-                if not pushData (r.tag_id,CamRange,Hdg):
+
+                if not pushData (r.tag_id,CamRange,Hdg): #pushData updates the Hdgs and Rngs values in the network tables
+                    #However, now the update functions handle this. Also, due to the current_tag subscripter [], 
+                    #it should always only update detected tags, removing the need for this check.
                     print (r.tag_id," failed.")
+        ClosestTag(tags,ID_to_Game_Element, Closest_ID, Closest_Rng) #Currently only evaluates after all the detected april tags have been added to tables
 
         output_stream.putFrame(output_img)
