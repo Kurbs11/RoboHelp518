@@ -97,11 +97,12 @@ class Tag(object, id) :
     def __init__(self, id):
 
         self.Tagid = id
+        ntinst = NetworkTableInstance.getDefault() #I believe necessary for accessing Tables
         self.tagtable = ntinst.getTable("Tag_{:02d}".format(id)) #Concern is that these values aren't being adjusted
         self.config_Rng = self.tagtable.getDoubleTopic("Rng").publish()
         self.config_Hdg = self.tagtable.getDoubleTopic("Hdg").publish()
-        self.Rng = 1 #default number (placeholder)
-        self.Hdg = 1
+        self.Rng = 999 #default number (placeholder)
+        self.Hdg = 999
     def update_Rng(self,new_Rng): 
         self.Rng = new_Rng #Updates the value 
         self.config_Rng.set(self.Rng) # Updates the network table with the new value (Should make pushData() defunct)
@@ -324,34 +325,34 @@ def startSwitchedCamera(config):
 
     return server
 
-def setTag(tags, tag_id, Hdg, Rng):
+def setTag(tags, tag_id, Hdg, Rng): #Should be redundant after class design
 
     for tag in tags:
         if tag_id == tag.id:
             tag.Hdg.set(Hdg)
             tag.Rng.set(Rng)
 
-def new_setTags(tags): #uses the class-based approach
-    placeholder = 1
 
 
-
-def ClosestTag(tags, ID_to_Game_Element, Closest_ID, Closest_Rng):
+def ClosestTag(tags, ID_to_Game_Element, Closest_Object, Closest_Rng, Closest_Hdg):
     #Import from notebook
     if len(tags) == 0:
-        Closest_ID.set("None In View") #The assumption is the tables can take in strings
+        Closest_Object.set("None In View") #The assumption is the tables can take in strings
         Closest_Rng.set(-1) #Obvious garbage value
         return
     
-    closest = [] #Will be a 2-element array containing the most recent closest id and its range
+    closest = [] #Will be a 3-element array containing the most recent closest id, its range, and its heading
     closest.append(tags[0].Tagid)
     closest.append(tags[0].Rng)
+    closest.append(tags[0].Hdg)
     for tag in tags:
         if tag.Rng < closest[1]:
             closest[0] = ID_to_Game_Element[tag.Tagid] #Closest location's id is input into dictionary to output the name of the game object 
             closest[1] = tag.Rng
-    Closest_ID.set(closest[0]) #Updates the network table's location to the new closest one
+            closest[2] = tag.Hdg 
+    Closest_Object.set(closest[0]) #Updates the network table's location to the new closest one
     Closest_Rng.set(closest[1])
+    Closest_Hdg.set(closest[2])
 
     return 
 
@@ -465,9 +466,12 @@ if __name__ == "__main__":
     pub16H = Tag16_tbl.getDoubleTopic("Hdg").publish()
     pub16R = Tag16_tbl.getDoubleTopic("Rng").publish()
 
-    Closest_tag = ntinst.getTable("Closest Tag")
-    Closest_ID = Closest_tag.getDoubleTopic("Location").publish() #Maybe change into actual game element
+    #Currently calculated based on Closest Rng of Tag in view.
+    #Goal is to allow distance from one tag to be able to tell distance from all
+    Closest_tag = ntinst.getTable("Closest Tag") 
+    Closest_Object = Closest_tag.getDoubleTopic("Location").publish() #Maybe change into actual game element
     Closest_Rng = Closest_tag.getDoubleTopic("Rng").publish()
+    Closest_Hdg = Closest_tag.getDoubleTopic("Hdg").publish()
 
 
 
@@ -475,9 +479,9 @@ if __name__ == "__main__":
     tags = []
     for i in range(16):
         current_tag = Tag(i+1)
-        current_tag.Tagid()
-        current_tag.config_Rng() #Configuring the network table slots for current tag's heading and range
-        current_tag.config_Hdg()
+        current_tag.Tagid
+        current_tag.config_Rng #Configuring the network table slots for current tag's heading and range
+        current_tag.config_Hdg
         tags.append(current_tag) #Our tag system goes from 1-16, so this 0-15 loop needs minor offset 
 
 
@@ -508,6 +512,6 @@ if __name__ == "__main__":
                     #However, now the update functions handle this. Also, due to the current_tag subscripter [], 
                     #it should always only update detected tags, removing the need for this check.
                     print (r.tag_id," failed.")
-        ClosestTag(tags,ID_to_Game_Element, Closest_ID, Closest_Rng) #Currently only evaluates after all the detected april tags have been added to tables
+        ClosestTag(tags,ID_to_Game_Element, Closest_Object, Closest_Rng, Closest_Hdg) #Currently only evaluates after all the detected april tags have been added to tables
 
         output_stream.putFrame(output_img)
