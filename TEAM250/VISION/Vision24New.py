@@ -14,6 +14,7 @@ import sys
 import cv2
 import numpy as np
 import apriltag
+from tag import * 
 
 from cscore import CameraServer, VideoSource, UsbCamera, MjpegServer
 from ntcore import NetworkTableInstance, EventFlags
@@ -93,22 +94,22 @@ def get_camera_parameters():
     Pfile.close()
     return j["width"], j["height"], np.array(j["mtx"]), np.array(j["dist"])
 
-class Tag(object, id) :
-    def __init__(self, id):
+# class Tag(object, id) :
+#     def __init__(self, id):
 
-        self.Tagid = id
-        ntinst = NetworkTableInstance.getDefault() #I believe necessary for accessing Tables
-        self.tagtable = ntinst.getTable("Tag_{:02d}".format(id)) #Concern is that these values aren't being adjusted
-        self.config_Rng = self.tagtable.getDoubleTopic("Rng").publish()
-        self.config_Hdg = self.tagtable.getDoubleTopic("Hdg").publish()
-        self.Rng = 999 #default number (placeholder)
-        self.Hdg = 999
-    def update_Rng(self,new_Rng): 
-        self.Rng = new_Rng #Updates the value 
-        self.config_Rng.set(self.Rng) # Updates the network table with the new value (Should make pushData() defunct)
-    def update_Hdg(self,new_Hdg):
-        self.Hdg = new_Hdg
-        self.config_Hdg.set(self.Hdg)
+#         self.Tagid = id
+#         ntinst = NetworkTableInstance.getDefault() #I believe necessary for accessing Tables
+#         self.tagtable = ntinst.getTable("Tag_{:02d}".format(id)) #Concern is that these values aren't being adjusted
+#         self.config_Rng = self.tagtable.getDoubleTopic("Rng").publish()
+#         self.config_Hdg = self.tagtable.getDoubleTopic("Hdg").publish()
+#         self.Rng = 999 #default number (placeholder)
+#         self.Hdg = 999
+#     def update_Rng(self,new_Rng): 
+#         self.Rng = new_Rng #Updates the value 
+#         self.config_Rng.set(self.Rng) # Updates the network table with the new value (Should make pushData() defunct)
+#     def update_Hdg(self,new_Hdg):
+#         self.Hdg = new_Hdg
+#         self.config_Hdg.set(self.Hdg)
 
 def pushData(TagID,Rng,Hdg):
     if TagID == 1:
@@ -478,7 +479,7 @@ if __name__ == "__main__":
     #Create 16 tag objects (This is an alternative way to the 48 lines of code up above)
     tags = []
     for i in range(16):
-        current_tag = Tag(i+1)
+        current_tag = Tag(i+1, ntinst)
         current_tag.Tagid
         current_tag.config_Rng #Configuring the network table slots for current tag's heading and range
         current_tag.config_Hdg
