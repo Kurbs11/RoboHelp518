@@ -1,8 +1,7 @@
 from ntcore import NetworkTableInstance, EventFlags
 
-class Tag(object, id) :
+class Tag(object) :
     def __init__(self, id, ntinst):
-
         self.Tagid = id
         self.ntinst = ntinst #I believe necessary for accessing Tables
         self.tagtable = self.ntinst.getTable("Tag_{:02d}".format(id)) #Concern is that these values aren't being adjusted
