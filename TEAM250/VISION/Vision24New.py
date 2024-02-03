@@ -13,8 +13,7 @@ import time
 import sys
 import cv2
 import numpy as np
-import apriltag
-from tag import * 
+import apriltag 
 
 from cscore import CameraServer, VideoSource, UsbCamera, MjpegServer
 from ntcore import NetworkTableInstance, EventFlags
@@ -94,22 +93,22 @@ def get_camera_parameters():
     Pfile.close()
     return j["width"], j["height"], np.array(j["mtx"]), np.array(j["dist"])
 
-# class Tag(object, id) :
-#     def __init__(self, id):
+class Tag(object, id) :
+    def __init__(self, id):
 
-#         self.Tagid = id
-#         ntinst = NetworkTableInstance.getDefault() #I believe necessary for accessing Tables
-#         self.tagtable = ntinst.getTable("Tag_{:02d}".format(id)) #Concern is that these values aren't being adjusted
-#         self.config_Rng = self.tagtable.getDoubleTopic("Rng").publish()
-#         self.config_Hdg = self.tagtable.getDoubleTopic("Hdg").publish()
-#         self.Rng = 999 #default number (placeholder)
-#         self.Hdg = 999
-#     def update_Rng(self,new_Rng): 
-#         self.Rng = new_Rng #Updates the value 
-#         self.config_Rng.set(self.Rng) # Updates the network table with the new value (Should make pushData() defunct)
-#     def update_Hdg(self,new_Hdg):
-#         self.Hdg = new_Hdg
-#         self.config_Hdg.set(self.Hdg)
+        self.Tagid = id
+        ntinst = NetworkTableInstance.getDefault() #I believe necessary for accessing Tables
+        self.tagtable = ntinst.getTable("Tag_{:02d}".format(id)) #Concern is that these values aren't being adjusted
+        self.config_Rng = self.tagtable.getDoubleTopic("Rng").publish()
+        self.config_Hdg = self.tagtable.getDoubleTopic("Hdg").publish()
+        self.Rng = 999 #default number (placeholder)
+        self.Hdg = 999
+    def update_Rng(self,new_Rng): 
+        self.Rng = new_Rng #Updates the value 
+        self.config_Rng.set(self.Rng) # Updates the network table with the new value (Should make pushData() defunct)
+    def update_Hdg(self,new_Hdg):
+        self.Hdg = new_Hdg
+        self.config_Hdg.set(self.Hdg)
 
 def pushData(TagID,Rng,Hdg):
     if TagID == 1:
@@ -366,8 +365,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print ("TADA!")
-    IP='fauxbot'
-    #IP='192.168.1.41'
+    #IP='fauxbot'
+    IP='192.168.1.46'
 
     width, height, USBcam_mtx, USBcam_dist = get_camera_parameters()
     #sampleRequested,sampleCount,tagDistance,tagRotation = check_sample_request()   # <------
@@ -504,7 +503,7 @@ if __name__ == "__main__":
                 #setTag(tags, r.tag_id, Hdg, CamRange) #With this new class design, this function should now be unnecessary
 
                 #find the existing tag object with the tag_id in results 
-                current_tag = tags[r.tag_id +1]
+                current_tag = tags[r.tag_id -1]
                 current_tag.update_Rng(CamRange) #now that update_Rng is a class method, the tag object's Rng variable gets updated
                 current_tag.update_Hdg(Hdg)
                 
@@ -513,6 +512,6 @@ if __name__ == "__main__":
                     #However, now the update functions handle this. Also, due to the current_tag subscripter [], 
                     #it should always only update detected tags, removing the need for this check.
                     print (r.tag_id," failed.")
-        ClosestTag(tags,ID_to_Game_Element, Closest_Object, Closest_Rng, Closest_Hdg) #Currently only evaluates after all the detected april tags have been added to tables
+        #ClosestTag(tags,ID_to_Game_Element, Closest_Object, Closest_Rng, Closest_Hdg) #Currently only evaluates after all the detected april tags have been added to tables
 
         output_stream.putFrame(output_img)

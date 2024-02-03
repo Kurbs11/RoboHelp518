@@ -1,0 +1,18 @@
+from ntcore import NetworkTableInstance, EventFlags
+
+class Tag(object, id, ntinst) :
+    def __init__(self, id, ntinst):
+
+        self.Tagid = id
+        self.ntinst = ntinst #I believe necessary for accessing Tables
+        self.tagtable = self.ntinst.getTable("Tag_{:02d}".format(id)) #Concern is that these values aren't being adjusted
+        self.config_Rng = self.tagtable.getDoubleTopic("Rng").publish()
+        self.config_Hdg = self.tagtable.getDoubleTopic("Hdg").publish()
+        self.Rng = 999 #default number (placeholder)
+        self.Hdg = 999
+    def update_Rng(self,new_Rng): 
+        self.Rng = new_Rng #Updates the value 
+        self.config_Rng.set(self.Rng) # Updates the network table with the new value (Should make pushData() defunct)
+    def update_Hdg(self,new_Hdg):
+        self.Hdg = new_Hdg
+        self.config_Hdg.set(self.Hdg)
