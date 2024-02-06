@@ -93,12 +93,12 @@ def get_camera_parameters():
     Pfile.close()
     return j["width"], j["height"], np.array(j["mtx"]), np.array(j["dist"])
 
-class Tag(object, id) :
-    def __init__(self, id):
+class Tag(object) :
+    def __init__(self, id, ntinst):
 
         self.Tagid = id
-        ntinst = NetworkTableInstance.getDefault() #I believe necessary for accessing Tables
-        self.tagtable = ntinst.getTable("Tag_{:02d}".format(id)) #Concern is that these values aren't being adjusted
+        self.ntinst = ntinst
+        self.tagtable = self.ntinst.getTable("Tag_{:02d}".format(id)) 
         self.config_Rng = self.tagtable.getDoubleTopic("Rng").publish()
         self.config_Hdg = self.tagtable.getDoubleTopic("Hdg").publish()
         self.Rng = 999 #default number (placeholder)
