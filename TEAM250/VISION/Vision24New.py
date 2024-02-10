@@ -13,7 +13,7 @@ import time
 import sys
 import cv2
 import numpy as np
-import apriltag 
+import apriltag
 
 from cscore import CameraServer, VideoSource, UsbCamera, MjpegServer
 from ntcore import NetworkTableInstance, EventFlags
@@ -34,7 +34,8 @@ CORNERS   = np.array([[-4.0,  4.0, 0.0],   # Start at NW corner and proceed
 #SWEETSPOT = np.array([0.0, 0.0, -30.0])
 SWEETSPOT = np.array([0.0, 0.0, 0.0])
 
-TAG_LOCATION=[(-99,-99,-99),(593.68,9.68,53.38),(637.21,34.79,53.38),(652.73,196.17,57.13),(652.73,218.42,57.13),(578.77,323.00,53.38),(72.50,323.00,53.38),(1.50,218.42,57.13),(1.50,196.17,57.13),(14.02,34.79,53.38),(57.54,9.68,53.38),(468.69,146.19,52.00),(468.69,177.10,52.00),(441.74,161.62,52.00),(209.48,161.62,52.00),(182.73,177.10,52.00),(182.73,146.19,52.00)]
+#Tag locations are all with respect to an origin in the red source zone
+TAG_LOCATIONS=[(593.68,9.68,53.38),(637.21,34.79,53.38),(652.73,196.17,57.13),(652.73,218.42,57.13),(578.77,323.00,53.38),(72.50,323.00,53.38),(1.50,218.42,57.13),(1.50,196.17,57.13),(14.02,34.79,53.38),(57.54,9.68,53.38),(468.69,146.19,52.00),(468.69,177.10,52.00),(441.74,161.62,52.00),(209.48,161.62,52.00),(182.73,177.10,52.00),(182.73,146.19,52.00)]
 BEARINGS=[(-99.0,-99.0)]*17
 Red_Tags = [3,4,5,9,10,11,12,13]
 Blue_Tags = [1,2,6,7,8,14,15,16]
@@ -110,73 +111,7 @@ class Tag(object) :
         self.Hdg = new_Hdg
         self.config_Hdg.set(self.Hdg)
 
-def pushData(TagID,Rng,Hdg):
-    if TagID == 1:
-        pub1H.set(Hdg)
-        pub1R.set(Rng)
-        return True
-    elif TagID == 2:
-        pub2H.set(Hdg)
-        pub2R.set(Rng)
-        return True
-    elif TagID == 3:
-        pub3H.set(Hdg)
-        pub3R.set(Rng)
-        return True
-    elif TagID == 4:
-        pub4H.set(Hdg)
-        pub4R.set(Rng)
-        return True
-    elif TagID == 5:
-        pub5H.set(Hdg)
-        pub5R.set(Rng)
-        return True
-    elif TagID == 6:
-        pub6H.set(Hdg)
-        pub6R.set(Rng)
-        return True
-    elif TagID == 7:
-        pub7H.set(Hdg)
-        pub7R.set(Rng)
-        return True
-    elif TagID == 8:
-        pub8H.set(Hdg)
-        pub8R.set(Rng)
-        return True
-    elif TagID == 9:
-        pub9H.set(Hdg)
-        pub9R.set(Rng)
-        return True
-    elif TagID == 10:
-        pub10H.set(Hdg)
-        pub10R.set(Rng)
-        return True
-    elif TagID == 11:
-        pub11H.set(Hdg)
-        pub11R.set(Rng)
-        return True
-    elif TagID == 12:
-        pub12H.set(Hdg)
-        pub12R.set(Rng)
-        return True
-    elif TagID == 13:
-        pub13H.set(Hdg)
-        pub13R.set(Rng)
-        return True
-    elif TagID == 14:
-        pub14H.set(Hdg)
-        pub14R.set(Rng)
-        return True
-    elif TagID == 15:
-        pub15H.set(Hdg)
-        pub15R.set(Rng)
-        return True
-    elif TagID == 16:
-        pub16H.set(Hdg)
-        pub16R.set(Rng)
-        return True
 
-    return False
     
 def parseError(str):
     """Report parse error."""
@@ -325,7 +260,7 @@ def startSwitchedCamera(config):
 
     return server
 
-def setTag(tags, tag_id, Hdg, Rng): #Should be redundant after class design
+def setTag(tags, tag_id, Hdg, Rng):
 
     for tag in tags:
         if tag_id == tag.id:
@@ -333,15 +268,14 @@ def setTag(tags, tag_id, Hdg, Rng): #Should be redundant after class design
             tag.Rng.set(Rng)
 
 
-
-def ClosestTag(tags, ID_to_Game_Element, Closest_Object, Closest_Rng, Closest_Hdg):
+def ClosestTag(tags, ID_to_Game_Element, Closest_ID, Closest_Rng, Closest_Hdg):
     #Import from notebook
     if len(tags) == 0:
-        Closest_Object.set("None In View") #The assumption is the tables can take in strings
+        Closest_ID.set("None In View") #The assumption is the tables can take in strings
         Closest_Rng.set(-1) #Obvious garbage value
         return
     
-    closest = [] #Will be a 3-element array containing the most recent closest id, its range, and its heading
+    closest = [] #Will be a 2-element array containing the most recent closest id and its range
     closest.append(tags[0].Tagid)
     closest.append(tags[0].Rng)
     closest.append(tags[0].Hdg)
@@ -350,11 +284,19 @@ def ClosestTag(tags, ID_to_Game_Element, Closest_Object, Closest_Rng, Closest_Hd
             closest[0] = ID_to_Game_Element[tag.Tagid] #Closest location's id is input into dictionary to output the name of the game object 
             closest[1] = tag.Rng
             closest[2] = tag.Hdg 
-    Closest_Object.set(closest[0]) #Updates the network table's location to the new closest one
+    Closest_ID.set(closest[0]) #Updates the network table's location to the new closest one
     Closest_Rng.set(closest[1])
     Closest_Hdg.set(closest[2])
 
     return 
+def OneTagToAll(Input_Tag,Tags,TAG_LOCATIONS):
+    #Using the closest tag in view as an input, we can calculate the cameras distance to all the other tags 
+    #If through this process, there is a tag out of frame closer to the camera, we will update it to be the new closest
+    for Tag in Tags:
+        if Tag.Tagid != Input_Tag.Tagid:
+            pass
+    pass
+
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2:
@@ -401,90 +343,24 @@ if __name__ == "__main__":
     input_stream = CameraServer.getVideo()
     output_stream = CameraServer.putVideo('Vision 2024', width, height)
 
-    ##Initialization of network tables for Tags1-16 is now handled in the tag object construction. Requires testing before deletion.
-    Tag01_tbl = ntinst.getTable("Tag_01") #network table instance-> creates the tabel for Tag1
-    pub1H = Tag01_tbl.getDoubleTopic("Hdg").publish()
-    pub1R = Tag01_tbl.getDoubleTopic("Rng").publish()
-
-    Tag02_tbl = ntinst.getTable("Tag_02")
-    pub2H = Tag02_tbl.getDoubleTopic("Hdg").publish()
-    pub2R = Tag02_tbl.getDoubleTopic("Rng").publish()
-
-    Tag03_tbl = ntinst.getTable("Tag_03")
-    pub3H = Tag03_tbl.getDoubleTopic("Hdg").publish()
-    pub3R = Tag03_tbl.getDoubleTopic("Rng").publish()
-
-    Tag04_tbl = ntinst.getTable("Tag_04")
-    pub4H = Tag04_tbl.getDoubleTopic("Hdg").publish()
-    pub4R = Tag04_tbl.getDoubleTopic("Rng").publish()
-
-    Tag05_tbl = ntinst.getTable("Tag_05")
-    pub5H = Tag05_tbl.getDoubleTopic("Hdg").publish()
-    pub5R = Tag05_tbl.getDoubleTopic("Rng").publish()
-
-    Tag06_tbl = ntinst.getTable("Tag_06")
-    pub6H = Tag06_tbl.getDoubleTopic("Hdg").publish()
-    pub6R = Tag06_tbl.getDoubleTopic("Rng").publish()
-
-    Tag07_tbl = ntinst.getTable("Tag_07")
-    pub7H = Tag07_tbl.getDoubleTopic("Hdg").publish()
-    pub7R = Tag07_tbl.getDoubleTopic("Rng").publish()
-
-    Tag08_tbl = ntinst.getTable("Tag_08")
-    pub8H = Tag08_tbl.getDoubleTopic("Hdg").publish()
-    pub8R = Tag08_tbl.getDoubleTopic("Rng").publish()
-
-    Tag09_tbl = ntinst.getTable("Tag_09")
-    pub9H = Tag09_tbl.getDoubleTopic("Hdg").publish()
-    pub9R = Tag09_tbl.getDoubleTopic("Rng").publish()
-
-    Tag10_tbl = ntinst.getTable("Tag_10")
-    pub10H = Tag10_tbl.getDoubleTopic("Hdg").publish()
-    pub10R = Tag10_tbl.getDoubleTopic("Rng").publish()
-
-    Tag11_tbl = ntinst.getTable("Tag_11")
-    pub11H = Tag11_tbl.getDoubleTopic("Hdg").publish()
-    pub11R = Tag11_tbl.getDoubleTopic("Rng").publish()
-
-    Tag12_tbl = ntinst.getTable("Tag_12")
-    pub12H = Tag12_tbl.getDoubleTopic("Hdg").publish()
-    pub12R = Tag12_tbl.getDoubleTopic("Rng").publish()
-
-    Tag13_tbl = ntinst.getTable("Tag_13")
-    pub13H = Tag13_tbl.getDoubleTopic("Hdg").publish()
-    pub13R = Tag13_tbl.getDoubleTopic("Rng").publish()
-
-    Tag14_tbl = ntinst.getTable("Tag_14")
-    pub14H = Tag14_tbl.getDoubleTopic("Hdg").publish()
-    pub14R = Tag14_tbl.getDoubleTopic("Rng").publish()
-
-    Tag15_tbl = ntinst.getTable("Tag_15")
-    pub15H = Tag15_tbl.getDoubleTopic("Hdg").publish()
-    pub15R = Tag15_tbl.getDoubleTopic("Rng").publish()
-
-    Tag16_tbl = ntinst.getTable("Tag_16")
-    pub16H = Tag16_tbl.getDoubleTopic("Hdg").publish()
-    pub16R = Tag16_tbl.getDoubleTopic("Rng").publish()
-
-    #Currently calculated based on Closest Rng of Tag in view.
-    #Goal is to allow distance from one tag to be able to tell distance from all
-    Closest_tag = ntinst.getTable("Closest Tag") 
-    Closest_Object = Closest_tag.getDoubleTopic("Location").publish() #Maybe change into actual game element
+    ##Initialization of network tables for Tags1-16 is now handled in the tag object construction. 
+    
+    Closest_tag = ntinst.getTable("Closest Tag")
+    Closest_ID = Closest_tag.getStringTopic("Location").publish() #Topic has input based on ID to game-element map
     Closest_Rng = Closest_tag.getDoubleTopic("Rng").publish()
     Closest_Hdg = Closest_tag.getDoubleTopic("Hdg").publish()
 
 
-
     #Create 16 tag objects (This is an alternative way to the 48 lines of code up above)
     tags = []
-    for i in range(16):
+    for i in range(16): 
         current_tag = Tag(i+1, ntinst)
         current_tag.Tagid
         current_tag.config_Rng #Configuring the network table slots for current tag's heading and range
         current_tag.config_Hdg
         tags.append(current_tag) #Our tag system goes from 1-16, so this 0-15 loop needs minor offset 
 
-
+    CameraFieldCoordinates = [-1,-1,-1] #Will be used to give exact position of the camera based on fields coordinate system
     # loop forever
     while True:
         frame_time, input_img = input_stream.grabFrame(img)
@@ -506,12 +382,11 @@ if __name__ == "__main__":
                 current_tag = tags[r.tag_id -1]
                 current_tag.update_Rng(CamRange) #now that update_Rng is a class method, the tag object's Rng variable gets updated
                 current_tag.update_Hdg(Hdg)
-                
+                CameraFieldCoordinates[0] = CamPos[0] #There is a good chance the fudge offsets will need to be applied here as well.
+                CameraFieldCoordinates[1] = CamPos[1]
+                CameraFieldCoordinates[2] = CamPos[2] #Need to know which tag this position is associated with... (Maybe need new tag attributexus)
+                #Also look into potentially making these Arrays just one
 
-                if not pushData (r.tag_id,CamRange,Hdg): #pushData updates the Hdgs and Rngs values in the network tables
-                    #However, now the update functions handle this. Also, due to the current_tag subscripter [], 
-                    #it should always only update detected tags, removing the need for this check.
-                    print (r.tag_id," failed.")
-        #ClosestTag(tags,ID_to_Game_Element, Closest_Object, Closest_Rng, Closest_Hdg) #Currently only evaluates after all the detected april tags have been added to tables
-
+        ClosestTag(tags,ID_to_Game_Element, Closest_ID, Closest_Rng, Closest_Hdg) #Currently only evaluates after all the detected april tags have been added to tables
+        
         output_stream.putFrame(output_img)
