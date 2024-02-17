@@ -7,7 +7,7 @@
 # Open Source Software; you can modify and/or share it under the terms of
 # the WPILib BSD license file in the root directory of this project.
 
-from math import pi,atan2,asin,sqrt, sin, cos
+from math import pi,atan2,asin,sqrt, sin, cos, degrees 
 import json
 import time
 import sys
@@ -99,10 +99,12 @@ cmd             = ''
 
 class Tag(object) :
     def __init__(self, id, ntinst):
-
+        
         self.Tagid = id
         self.ntinst = ntinst
-        self.tagtable = self.ntinst.getTable("Tag_{:02d}".format(id)) 
+        #self.tagtable = self.ntinst.getTable("Tag_{:02d}".format(id))  
+        self.tagtable = self.ntinst.getTable(ID_to_Game_Element[id]) #Table name now tells you game object
+
         self.config_Rng = self.tagtable.getDoubleTopic("Rng").publish()
         self.config_Hdg = self.tagtable.getDoubleTopic("Hdg").publish()
         self.Rng = 999 #default number (placeholder)
@@ -151,12 +153,12 @@ def Set_Tag_List(cmd,Alliance): #Command is from Drivestation
 
 
 def get_camera_parameters():
-    param_file = '/home/pi/Camera_B_800x600_parameters.json'
+    param_file = '/home/pi/Camera_G_1280x800_parameters.json'
     #param_file = '/home/pi/Camera_B_640x480_parameters.json'
     Pfile      = open(param_file,'r')
     j          = json.load(Pfile)
     Pfile.close()
-    return j["width"], j["height"], np.array(j["mtx"]), np.array(j["dist"])
+    return j["width"], j["height"], np.array(j["mtx"]), np.array(j["dist"]), j["FudgeFactor"], j["FudgeOffset"]
 
 
 def parseError(str):
@@ -330,14 +332,22 @@ def ClosestTag(tags, ID_to_Game_Element, Closest_ID, Closest_Rng, Closest_Hdg):
     Closest_Hdg.set(closest[2])
 
     return 
-def OneTagToAll(Input_Tag,Tags,TAG_LOCATIONS): #May take in Bearings... TBD (May get deleted entirely)
-    #Using the closest tag in view as an input, we can calculate the cameras distance to all the other tags 
-    #If through this process, there is a tag out of frame closer to the camera, we will update it to be the new closest
-    for Tag in Tags:
-        if Tag.Tagid != Input_Tag.Tagid:
-            pass
-    pass
 
+HEADING  = [999.0]*17
+RANGE    = [999.0]*17
+
+def BuildWorld (X, Y, Hdg, RefTag): #New method of knowing position with respect to all tags by only reading one
+    RefTag-=1
+    RefX    = TAG_LOCATION[RefTag][0]
+    RefY    = TAG_LOCATION[RefTag][1]
+    for T in range(1,17):
+        TX        = TAG_LOCATION[T][0]
+        TY        = TAG_LOCATION[T][1]
+        Angle2Ref =-(degrees(atan2(Y-RefY,X-RefX))+90) # The +90 makes the values
+        Angle2Tag =-(degrees(atan2(Y-TY,X-TX))+90) # relative to NORTH instead of EAST.
+        HdgT      = Angle2Tag-Angle2Ref+Hdg
+        if HdgT > 180:         # This makes headings more compass-like. Plus is East
+            HdgT = HdgT - 360  # minus is WEST
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2:
@@ -454,6 +464,14 @@ if __name__ == "__main__":
                 pubCamWorldX.set(WorldX)
                 pubCamWorldY.set(WorldY) 
                 pubCamTag_id.set(r.tag_id)
+
+                HEADING[r.tag_id] = round(Hdg,2)
+                RANGE[r.tag_id] = round(CamRange,2)
+                BuildWorld (WorldX, WorldY, Hdg, r.tag_id) #Consider decreasing scope
+                # for i in range (1,17):
+                #     print ('{0:2d} {1:8.2f} {2:8.2f}'.format(i,HEADING[i],RANGE[i]))
+                # print (' ')
+
         ClosestTag(tags,ID_to_Game_Element, Closest_ID, Closest_Rng, Closest_Hdg) #Currently only evaluates after all the detected april tags have been added to tables
         
         output_stream.putFrame(output_img)
