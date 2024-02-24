@@ -1,0 +1,29 @@
+header{
+    background-color: aliceblue;
+}
+
+body{
+    background-color: aliceblue;
+}
+
+#about{
+    border-bottom: 3px solid purple;
+    color: purple;
+    text-align: center;
+}
+
+.summary{
+    border: 2px solid;
+    border-color: white;
+    margin: left;
+    height: auto;
+    overflow: auto;
+    padding: 20px;
+}
+
+.logo2{
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 25%;
+}
