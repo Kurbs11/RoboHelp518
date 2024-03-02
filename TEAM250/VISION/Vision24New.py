@@ -52,9 +52,9 @@ TAG_LOCATION= [[999.0, 999.0, 999.0],[593.68,   9.68, 53.38,  2.09], [637.21,  3
 , [ -1.50, 218.42, 57.13,  0.00], [ -1.50, 196.17, 57.13,  0.00], [ 14.02,  34.79, 53.38,  1.05]
 , [ 57.54,   9.68, 53.38,  1.05], [468.69, 146.19, 52.00,  5.24], [468.69, 177.10, 52.00,  1.05]
 , [441.74, 161.62, 52.00,  3.14], [209.48, 161.62, 52.00,  0.00], [182.73, 177.10, 52.00,  2.09], [182.73, 146.19, 52.00,  4.19]]
-RED_SPIKES   =np.array([(528.0,161.64),(528.0,218.64),(528.0,275.64)])
-BLUE_SPIKES  =np.array([(114.0,161.64),(114.0,218.64),(114.0,275.64)])
-PURPLE_SPIKES=np.array([(326.0,29.64),(326.0,95.64),(326.0,161.64),(326.0,227.64),(326.0,293.64)]) #Centerline spikes
+RED_SPIKES   =np.array([(528.0,161.64),(528.0,218.64),(528.0,275.64)]) #R/B Ordered left to right based on alliance 
+BLUE_SPIKES  =np.array([(114.0,275.64),(114.0,218.64),(114.0,161.64)])
+PURPLE_SPIKES=np.array([(326.0,293.64),(326.0,227.64),(326.0,161.64),(326.0,95.64),(326.0,29.64)]) #Centerline spikes (Ordered highest Y to lowest)
 BEARINGS=np.array([(999.0,999.0)]*17) #Will be added to closest function for offscreen tag detection
 ID_to_Game_Element = { #L/R Based on if camera is looking at the object
     1: "Blue Source Right",
@@ -149,7 +149,11 @@ class Tag(object) :
         self.Hdg = new_Hdg
         self.config_Hdg.set(self.Hdg)
         #May need to add a new attribute for necessary rotation (once directly in sweetspot heading=0 so you can't tell your orientation)
-        self.rotation = 361 #Degree representation (may need to be radians, also placeholder value)
+        self.config_Rot = self.tagtable.getDoubleTopic("Rot").publish()
+        self.Rot = 361 #Degree representation (may need to be radians, also placeholder value)
+    def update_Rot(self,new_Rot): 
+        self.Rot = new_Rot 
+        self.config_Rot.set(self.Rot)    
         #Note: Spikes wont be detected by OpenCV so their values will need to be updated in a separate function
 
 def rotate(point, origin, angle): #Point is a tuple of the camera's XZ-WorldLocation 
@@ -541,7 +545,7 @@ if __name__ == "__main__":
                 BuildWorld (WorldX, WorldY, HdgRad, r.tag_id) #Consider decreasing scope
                 print('TAG HEADING   RANGE')
                 for i in range (1,17):
-                    print ('{0:2d} {1:8.2f} {2:8.2f}'.format(i,BEARINGS[i][0],BEARINGS[i][1])) #Displays the robots location with respect to each tag's sweetspot (more info needed for spikes)
+                    print ('{0:2d} {1:8.2f} {2:8.2f}'.format(i,BEARINGS[i][0],BEARINGS[i][1]))
                 print (' ')
                 pubHeadings.set(HEADING)
                 pubRanges.set(RANGE)
