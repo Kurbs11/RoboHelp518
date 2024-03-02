@@ -1,11 +1,23 @@
 # Currently expects networktable server on fauxbot.
 
 # $Revision: 1.2 $
-# $Date: 2024-01-19 10:11:51-05 $
+# $Date: 2024-03-01 09:22:07-05 $
 # $Author: animation $
 # Copyright (c) FIRST and other WPILib contributors.
 # Open Source Software; you can modify and/or share it under the terms of
 # the WPILib BSD license file in the root directory of this project.
+
+# What's going on here?
+# The robot needs to know how to get from where it is to where it wants to go.
+# "Where it wants to go" is a pre-defined HOTSPOT that is an absolute field X,Y
+# position and a rotation.
+# The camera is constantly looking for any and all Apriltags. They are used to
+# update the robot's location data - an array (BEARINGS) that tells it where it
+# is (heading & range) in relation to each HOTSPOT.
+#
+#
+#
+#
 
 from math import pi,atan2,asin,sqrt, sin, cos, degrees 
 import json
@@ -14,6 +26,7 @@ import sys
 import cv2
 import numpy as np
 import apriltag
+import subprocess
 
 from cscore import CameraServer, VideoSource, UsbCamera, MjpegServer
 from ntcore import NetworkTableInstance, EventFlags
@@ -32,18 +45,17 @@ CORNERS   = np.array([[-4.0,  4.0, 0.0],   # Start at NW corner and proceed
 SWEETSPOT=np.array(([[12.0, 0.0, 72.0]])*17)
 SWEETSPOT=SWEETSPOT.reshape(17,3)
 
-# Waypoints are like SWEETSPOTS but aren't tied to a Tag. They're used in Auton. (Not implemented yet)
-#Likely to be used for Note starting positions on centerline
-RedWaypoints    = [ 1, 2, 3, 4, 5 ]
-BlueWaypoints   = [ 1, 2, 3, 4, 5 ]
 
 #Tag locations are all with respect to an origin in the red source zone
-TAG_LOCATION= [[593.68,   9.68, 53.38,  2.09], [637.21,  34.79, 53.38,  2.09], [652.73, 196.17, 57.13,  3.14]
+TAG_LOCATION= [[999.0, 999.0, 999.0],[593.68,   9.68, 53.38,  2.09], [637.21,  34.79, 53.38,  2.09], [652.73, 196.17, 57.13,  3.14]
 , [652.73, 218.42, 57.13,  3.14], [578.77, 323.00, 53.38,  4.71], [ 72.50, 323.00, 53.38,  4.71]
 , [ -1.50, 218.42, 57.13,  0.00], [ -1.50, 196.17, 57.13,  0.00], [ 14.02,  34.79, 53.38,  1.05]
 , [ 57.54,   9.68, 53.38,  1.05], [468.69, 146.19, 52.00,  5.24], [468.69, 177.10, 52.00,  1.05]
 , [441.74, 161.62, 52.00,  3.14], [209.48, 161.62, 52.00,  0.00], [182.73, 177.10, 52.00,  2.09], [182.73, 146.19, 52.00,  4.19]]
-BEARINGS=[(999.0,999.0)]*17 #Will be added to closest function for offscreen tag detection
+RED_SPIKES   =np.array([(528.0,161.64),(528.0,218.64),(528.0,275.64)])
+BLUE_SPIKES  =np.array([(114.0,161.64),(114.0,218.64),(114.0,275.64)])
+PURPLE_SPIKES=np.array([(326.0,29.64),(326.0,95.64),(326.0,161.64),(326.0,227.64),(326.0,293.64)]) #Centerline spikes
+BEARINGS=np.array([(999.0,999.0)]*17) #Will be added to closest function for offscreen tag detection
 ID_to_Game_Element = { #L/R Based on if camera is looking at the object
     1: "Blue Source Right",
     2: "Blue Source Left",
@@ -54,13 +66,30 @@ ID_to_Game_Element = { #L/R Based on if camera is looking at the object
     7: "Blue Speaker Middle",
     8: "Blue Speaker Left",
     9: "Red Source Right",
-    10 : "Red Source Left",
+    10: "Red Source Left",
     11: "Red Stage Left",
     12: "Red Stage Right",
     13: "Red Center Stage",
     14: "Blue Center Stage",
     15: "Blue Stage Left",
-    16: "Blue Stage Right"
+    16: "Blue Stage Right",
+    17: "Blue Spike Left",
+    18: "Blue Spike Middle", 
+    19: "Blue Spike Right",
+    20: "Blue Centerline Spike 1", #Centerline spikes are listed 1-5 starting farthest from scoring table side (per request)
+    21: "Blue Centerline Spike 2",
+    22: "Blue Centerline Spike 3",
+    23: "Blue Centerline Spike 4",
+    24: "Blue Centerline Spike 5",
+    25: "Red Spike Left",
+    26: "Red Spike Middle", 
+    27: "Red Spike Right",
+    28: "Red Centerline Spike 1", #Sweetspots for centerline spikes may differ per alliance despite spikes physically being in same spot
+    29: "Red Centerline Spike 2", #This is to allow for different strategies of approach like dragging all spikes onto your side
+    30: "Red Centerline Spike 3",
+    31: "Red Centerline Spike 4",
+    32: "Red Centerline Spike 5",
+
 }
 
 
@@ -96,6 +125,8 @@ SWSPos          = CamPos #SweetSpot Position
 Alliance        = 'none'
 current_cmd     = 'none'
 cmd             = ''
+WorldX          = 999
+WorldY          = 999
 
 class Tag(object) :
     def __init__(self, id, ntinst):
@@ -104,6 +135,8 @@ class Tag(object) :
         self.ntinst = ntinst
         #self.tagtable = self.ntinst.getTable("Tag_{:02d}".format(id))  
         self.tagtable = self.ntinst.getTable(ID_to_Game_Element[id]) #Table name now tells you game object
+        #IDs 17-32 are not for tags, but for spikes, which are where the notes are located at the start of match
+        #Spikes possess all of the other information tags do, except we can't directly measure their distance and need the info of a tag in view
 
         self.config_Rng = self.tagtable.getDoubleTopic("Rng").publish()
         self.config_Hdg = self.tagtable.getDoubleTopic("Hdg").publish()
@@ -115,7 +148,9 @@ class Tag(object) :
     def update_Hdg(self,new_Hdg):
         self.Hdg = new_Hdg
         self.config_Hdg.set(self.Hdg)
-
+        #May need to add a new attribute for necessary rotation (once directly in sweetspot heading=0 so you can't tell your orientation)
+        self.rotation = 361 #Degree representation (may need to be radians, also placeholder value)
+        #Note: Spikes wont be detected by OpenCV so their values will need to be updated in a separate function
 
 def rotate(point, origin, angle): #Point is a tuple of the camera's XZ-WorldLocation 
     #Origin is a tuple of the closest tag's XZ World-Location, Angle is the tags offset
@@ -151,9 +186,20 @@ def Set_Tag_List(cmd,Alliance): #Command is from Drivestation
         elif cmd == '':
             return []
 
+def register_Hotspot(X, Y, Rot): #Used to acquire accurate values of sweetspots based on robots position
+# X & Y are relateive to the field (world)
+# Rot is relative to NORTH
+    if X == 999 or Y == 999: #Will be 999 before it reads its first tag
+        return()
+    subprocess.run(["sudo","mount","-o","remount","rw","/"])
+    SSfile=open('Sweetspot.dat','a') 
+    SSfile.write('{0:5.3f} {1:5.3f} {2:5.3f}\n'.format(float(X),float(Y),float(Rot)))
+    SSfile.close
+    subprocess.run(["sudo","mount","-o","remount","ro","/"])
+    return ()
 
 def get_camera_parameters():
-    param_file = '/home/pi/Camera_G_1280x800_parameters.json'
+    param_file = '/home/pi/Camera_Matrix.json'
     #param_file = '/home/pi/Camera_B_640x480_parameters.json'
     Pfile      = open(param_file,'r')
     j          = json.load(Pfile)
@@ -314,7 +360,7 @@ def startSwitchedCamera(config):
 def ClosestTag(tags, ID_to_Game_Element, Closest_ID, Closest_Rng, Closest_Hdg):
     #Import from notebook
     if len(tags) == 0:
-        Closest_ID.set("None In View") #The assumption is the tables can take in strings
+        Closest_ID.set("None In View") # Table topics can also take in strings
         Closest_Rng.set(-1) #Obvious garbage value
         return
     
@@ -336,18 +382,29 @@ def ClosestTag(tags, ID_to_Game_Element, Closest_ID, Closest_Rng, Closest_Hdg):
 HEADING  = [999.0]*17
 RANGE    = [999.0]*17
 
-def BuildWorld (X, Y, Hdg, RefTag): #New method of knowing position with respect to all tags by only reading one
-    RefTag-=1
-    RefX    = TAG_LOCATION[RefTag][0]
-    RefY    = TAG_LOCATION[RefTag][1]
-    for T in range(1,17):
-        TX        = TAG_LOCATION[T][0]
-        TY        = TAG_LOCATION[T][1]
-        Angle2Ref =-(degrees(atan2(Y-RefY,X-RefX))+90) # The +90 makes the values
-        Angle2Tag =-(degrees(atan2(Y-TY,X-TX))+90) # relative to NORTH instead of EAST.
-        HdgT      = Angle2Tag-Angle2Ref+Hdg
-        if HdgT > 180:         # This makes headings more compass-like. Plus is East
-            HdgT = HdgT - 360  # minus is WEST
+"""
+BuildWorld takes in the camera's World X & WorldY, its heading wrt to the
+reference tag and the reference tag id. It populates the BEARINGS table with the
+headings and ranges of the other 15 tags.
+"""
+def BuildWorld (WX, WY, HdgRad, RefTag):
+    # New method of knowing position with respect to all tags by only reading one
+    # Calculate intermediate angles relative to X-axis. Adjust for heading later.
+    # A2R: angle between RefTag and X-axis at camera
+    # A2K: angle between Tag K and X-axis at camera
+    deltaX = TAG_LOCATION[RefTag][0] - WX
+    deltaY = TAG_LOCATION[RefTag][1] - WY
+    A2R = atan2(deltaY,deltaX)
+    for K in range(1,17):
+        if K != RefTag:
+            deltaX = TAG_LOCATION[K][0] - WX
+            deltaY = TAG_LOCATION[K][1] - WY
+            A2K = atan2(deltaY,deltaX)
+            H2K = A2K - A2R - HdgRad
+            if H2K > pi:
+               H2K = H2K - 2*pi
+            BEARINGS[K][0] = -degrees(H2K)
+            BEARINGS[K][1] = sqrt(deltaX**2 + deltaY**2)
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2:
@@ -387,14 +444,24 @@ if __name__ == "__main__":
         startSwitchedCamera(config)
 
     # Allocating new images is very expensive, always try to preallocate
-    img = np.zeros(shape=(height, width, 1), dtype=np.uint8)
+    img = np.zeros(shape=(height, width, 3), dtype=np.uint8)
     input_stream = CameraServer.getVideo()
     output_stream = CameraServer.putVideo('Vision 2024', width, height)
 
     ##Initialization of network tables for Tags1-16 is now handled in the tag object construction. 
+    # This DS_tbl will be published by the Driver Station laptop in competition.
+    # For now, it's published by a Raspberry Pi.
     DS_tbl = ntinst.getTable("DS")
     subDS  = DS_tbl.getStringTopic("Cmd").subscribe(' ') #Since we are only Reading in Driverstation entries, we Subscribe
     subAlliance = DS_tbl.getStringTopic("Alliance").subscribe(' ')
+
+    # Headings_tbl & Ranges_tbl are for development use. They're not needed in
+    # competition.
+    Headings_tbl = ntinst.getTable("Headings")
+    pubHeadings  = Headings_tbl.getDoubleArrayTopic("WorldHdg").publish()
+    Ranges_tbl   = ntinst.getTable("Ranges")
+    pubRanges    = Ranges_tbl.getDoubleArrayTopic("WorldRng").publish()
+
 
     Closest_tag = ntinst.getTable("Closest Tag")
     Closest_ID = Closest_tag.getStringTopic("Location").publish() #Topic has input based on ID to game-element map
@@ -402,7 +469,6 @@ if __name__ == "__main__":
     Closest_Hdg = Closest_tag.getDoubleTopic("Hdg").publish()
 
     CamPos_tbl = ntinst.getTable("CamPos") #These are for the cameras field coordinates
-    pubCamWorldX = CamPos_tbl.getDoubleTopic("X").publish()
     pubCamWorldX = CamPos_tbl.getDoubleTopic("X").publish()
     pubCamWorldY = CamPos_tbl.getDoubleTopic("Y").publish()
     pubCamTag_id =  CamPos_tbl.getDoubleTopic("Tag_ID").publish()
@@ -417,20 +483,25 @@ if __name__ == "__main__":
 
     #Create 16 tag objects (This is an alternative way to the 48 lines of code up above)
     tags = []
-    for i in range(16): 
+    for i in range(32): 
         current_tag = Tag(i+1, ntinst)
         current_tag.Tagid
         current_tag.config_Rng #Configuring the network table slots for current tag's heading and range
         current_tag.config_Hdg
         tags.append(current_tag) #Our tag system goes from 1-16, so this 0-15 loop needs minor offset 
+        #The other 16 "tag" objects represent the spikes
 
     ###CameraFieldCoordinates = [-1,-1,-1] #Will be used to give exact position of the camera based on fields coordinate system
     # loop forever
     while True:
         current_cmd = subDS.get() #get() retrieves data from subscribed topic
+        
         if current_cmd != cmd: #If the command has changed, update!
             cmd = current_cmd
-            Tag_List = Set_Tag_List(cmd,Alliance)
+            if cmd == "W":
+                register_Hotspot(WorldX, WorldY,-180)
+            else:
+                Tag_List = Set_Tag_List(cmd,Alliance)
 
         frame_time, input_img = input_stream.grabFrame(img)
         output_img = np.copy(input_img)
@@ -441,7 +512,8 @@ if __name__ == "__main__":
                 ret, rvecs, tvecs = cv2.solvePnP(CORNERS,r.corners,USBcam_mtx,USBcam_dist,cv2.SOLVEPNP_IPPE_SQUARE)
                 ZYX,jac     = cv2.Rodrigues(rvecs)
                 #Rng         = cv2.Rodrigues(rvecs)[0]
-                Hdg         = atan2(tvecs[0],tvecs[2])*180/pi
+                HdgRad      = atan2(tvecs[0],tvecs[2])
+                Hdg         = HdgRad * 180/pi
                 CamPos      = -np.matrix(ZYX).T * np.matrix(tvecs)
                 CamRange    = (sqrt(CamPos[0]**2+CamPos[2]**2)) #Since our Y-value is never changing, we are no longer factoring it for Rng
                 
@@ -460,19 +532,20 @@ if __name__ == "__main__":
                 WorldX = TAG_LOCATION[r.tag_id][0]+CamPos[2]
                 WorldY = TAG_LOCATION[r.tag_id][1]+CamPos[0] #Concern: Is world Y-axis a different plane than CamY-axis?
                 WorldX,WorldY = rotate ((WorldX,WorldY),(TAG_LOCATION[r.tag_id][0],TAG_LOCATION[r.tag_id][1]),TAG_LOCATION[r.tag_id][3])
-
-                pubCamWorldX.set(WorldX)
+                pubCamWorldX.set(WorldX) 
                 pubCamWorldY.set(WorldY) 
                 pubCamTag_id.set(r.tag_id)
 
-                HEADING[r.tag_id] = round(Hdg,2)
-                RANGE[r.tag_id] = round(CamRange,2)
-                BuildWorld (WorldX, WorldY, Hdg, r.tag_id) #Consider decreasing scope
-                # for i in range (1,17):
-                #     print ('{0:2d} {1:8.2f} {2:8.2f}'.format(i,HEADING[i],RANGE[i]))
-                # print (' ')
+                BEARINGS[r.tag_id][0] = round(Hdg,2)
+                BEARINGS[r.tag_id][1] = round(CamRange,2)
+                BuildWorld (WorldX, WorldY, HdgRad, r.tag_id) #Consider decreasing scope
+                print('TAG HEADING   RANGE')
+                for i in range (1,17):
+                    print ('{0:2d} {1:8.2f} {2:8.2f}'.format(i,BEARINGS[i][0],BEARINGS[i][1])) #Displays the robots location with respect to each tag's sweetspot (more info needed for spikes)
+                print (' ')
+                pubHeadings.set(HEADING)
+                pubRanges.set(RANGE)
 
         ClosestTag(tags,ID_to_Game_Element, Closest_ID, Closest_Rng, Closest_Hdg) #Currently only evaluates after all the detected april tags have been added to tables
         
-        output_stream.putFrame(output_img)
-    #Note for next time: polishing of SweetspotV0 code needs to still be tested on PI
+        #output_stream.putFrame(output_img)
