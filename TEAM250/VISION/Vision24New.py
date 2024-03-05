@@ -1,11 +1,19 @@
 # Currently expects networktable server on fauxbot.
 
-# $Revision: 1.2 $
-# $Date: 2024-03-01 09:22:07-05 $
+# $Revision: 1.3 $
+# $Date: 2024-03-03 07:15:31-05 $
 # $Author: animation $
 # Copyright (c) FIRST and other WPILib contributors.
 # Open Source Software; you can modify and/or share it under the terms of
 # the WPILib BSD license file in the root directory of this project.
+
+# (Note about coordinates: We follow the convention used in the official field
+# drawings - X axis is the wall OPPOSITE the Amps, Y axis is the Blue Alliance
+# wall.
+# Note about rotation values: We picked NORTH to be the +Y direction. Internal
+# calculations are in radians, published values are in degrees between +/- 180.
+# Positive degrees are toward the EAST (+X direction), negative are toward the
+# WEST (-X direction), like a compass.)
 
 # What's going on here?
 # The robot needs to know how to get from where it is to where it wants to go.
@@ -45,16 +53,73 @@ CORNERS   = np.array([[-4.0,  4.0, 0.0],   # Start at NW corner and proceed
 SWEETSPOT=np.array(([[12.0, 0.0, 72.0]])*17)
 SWEETSPOT=SWEETSPOT.reshape(17,3)
 
+# Hotspots identify places on the field the robot wants to know about. These can
+# be tags or spikes or something like a waypoint. In addition to location data
+# Hotspots have orientation data: robot's rotation wrt NORTH. Hotspots are an
+# evolution of Sweetspots with several differences.
+# 1) Their X,Y values are relative to the field.
+# 2) They're no longer associated with a tag.
+# 3) There are more Hotspots than Sweetspots.
+# 4) The Z values are gone and replaced by rotation values. They're in radians.
+#
+# Right now there are 32 Hotspots. The first 16 are for the tags, the rest are
+# for the spikes.
+
+HotSpots = np.array [[999.00, 999.00,999.00] #All in ID_to_Game_Element dictionary order (Many of these are minor offets from tag locations)
+,[583.29,  15.68, 150.00]
+,[626.82,  40.79, 150.00]
+,[616.73, 208.17,  90.00]
+,[616.73, 230.42,  90.00]
+,[590.77, 323.00,   0.00]
+,[ 84.50, 323.00,   0.00]
+,[ 34.50, 206.42, -90.00]
+,[ 34.50, 184.17, -90.00]
+,[  3.63,  28.79,-150.00]
+,[ 47.15,   3.68,-150.00]
+,[458.30, 152.19, 150.00]
+,[479.08, 183.10,  30.00]
+,[441.74, 173.62,  90.00]
+,[209.48, 149.62, -90.00]
+,[193.12, 171.10, -30.00]
+,[172.34, 140.19,-150.00]
+,[116,275.64, 0] #0 Roatation (arbirary) for spikes
+,[116, 218.64, 0]
+,[116, 161.64, 0]
+,[326.6, 293.64, 0]
+,[326.6, 227.64, 0]
+,[326.6, 161.64, 0]
+,[326.6, 95.64, 0]
+,[326.6, 29.64, 0]
+,[537.2, 161.64, 0]
+,[537.2, 218.64,0]
+,[537.2, 275.64, 0]
+,[326.6, 293.64, 0]
+,[326.6, 227.64, 0]
+,[326.6, 161.64, 0]
+,[326.6, 95.64, 0]
+,[326.6, 29.64, 0]]
 
 #Tag locations are all with respect to an origin in the red source zone
-TAG_LOCATION= [[999.0, 999.0, 999.0],[593.68,   9.68, 53.38,  2.09], [637.21,  34.79, 53.38,  2.09], [652.73, 196.17, 57.13,  3.14]
-, [652.73, 218.42, 57.13,  3.14], [578.77, 323.00, 53.38,  4.71], [ 72.50, 323.00, 53.38,  4.71]
-, [ -1.50, 218.42, 57.13,  0.00], [ -1.50, 196.17, 57.13,  0.00], [ 14.02,  34.79, 53.38,  1.05]
-, [ 57.54,   9.68, 53.38,  1.05], [468.69, 146.19, 52.00,  5.24], [468.69, 177.10, 52.00,  1.05]
-, [441.74, 161.62, 52.00,  3.14], [209.48, 161.62, 52.00,  0.00], [182.73, 177.10, 52.00,  2.09], [182.73, 146.19, 52.00,  4.19]]
-RED_SPIKES   =np.array([(528.0,161.64),(528.0,218.64),(528.0,275.64)]) #R/B Ordered left to right based on alliance 
-BLUE_SPIKES  =np.array([(114.0,275.64),(114.0,218.64),(114.0,161.64)])
-PURPLE_SPIKES=np.array([(326.0,293.64),(326.0,227.64),(326.0,161.64),(326.0,95.64),(326.0,29.64)]) #Centerline spikes (Ordered highest Y to lowest)
+TAG_LOCATION= [[999.0, 999.0, 999.0]
+, [593.68,   9.68, 53.38,  2.09]
+, [637.21,  34.79, 53.38,  2.09]
+, [652.73, 196.17, 57.13,  3.14]
+, [652.73, 218.42, 57.13,  3.14]
+, [578.77, 323.00, 53.38,  4.71]
+, [ 72.50, 323.00, 53.38,  4.71]
+, [ -1.50, 218.42, 57.13,  0.00]
+, [ -1.50, 196.17, 57.13,  0.00]
+, [ 14.02,  34.79, 53.38,  1.05]
+, [ 57.54,   9.68, 53.38,  1.05]
+, [468.69, 146.19, 52.00,  5.24]
+, [468.69, 177.10, 52.00,  1.05]
+, [441.74, 161.62, 52.00,  3.14]
+, [209.48, 161.62, 52.00,  0.00]
+, [182.73, 177.10, 52.00,  2.09]
+, [182.73, 146.19, 52.00,  4.19]]
+RED_SPIKES   =np.array([(528.0,161.64),(528.0,218.64),(528.0,275.64)])
+BLUE_SPIKES  =np.array([(114.0,161.64),(114.0,218.64),(114.0,275.64)])
+PURPLE_SPIKES=np.array([(326.0,29.64),(326.0,95.64),(326.0,161.64),(326.0,227.64),(326.0,293.64)]) #Centerline spikes
 BEARINGS=np.array([(999.0,999.0)]*17) #Will be added to closest function for offscreen tag detection
 ID_to_Game_Element = { #L/R Based on if camera is looking at the object
     1: "Blue Source Right",
@@ -69,8 +134,8 @@ ID_to_Game_Element = { #L/R Based on if camera is looking at the object
     10: "Red Source Left",
     11: "Red Stage Left",
     12: "Red Stage Right",
-    13: "Red Center Stage",
-    14: "Blue Center Stage",
+    13: "Red Stage Center",
+    14: "Blue Stage Center",
     15: "Blue Stage Left",
     16: "Blue Stage Right",
     17: "Blue Spike Left",
@@ -89,7 +154,6 @@ ID_to_Game_Element = { #L/R Based on if camera is looking at the object
     30: "Red Centerline Spike 3",
     31: "Red Centerline Spike 4",
     32: "Red Centerline Spike 5",
-
 }
 
 
@@ -127,6 +191,7 @@ current_cmd     = 'none'
 cmd             = ''
 WorldX          = 999
 WorldY          = 999
+Hotspot_Ctr     = 0
 
 class Tag(object) :
     def __init__(self, id, ntinst):
@@ -165,39 +230,43 @@ def rotate(point, origin, angle): #Point is a tuple of the camera's XZ-WorldLoca
     return qx, qy
 
 def Set_Tag_List(cmd,Alliance): #Command is from Drivestation
-    if cmd == 'E':
-        return AllTags
-    if Alliance == 'RED':
-        if cmd == 'A': #A for Auton
-            pass                 # <--- fix this
-        elif cmd == 'M': #M for Amp :0
-            return [5]
-        elif cmd == 'R': #R for Source ;0
-            return [9,10]
-        elif cmd == 'S': #S for Speaker 
-            return [3,4]
-        elif cmd == '':
-            return []
-    elif Alliance == 'BLUE':
-        if cmd == 'A':
-            pass                 # <--- fix this
-        elif cmd == 'M':
-            return [6]
-        elif cmd == 'R':
-            return [1,2]
-        elif cmd == 'S':
-            return [7,8]
-        elif cmd == '':
-            return []
+    return AllTags
+    #if cmd == 'E':
+    #    return AllTags
+    #if Alliance == 'RED':
+    #    if cmd == 'A': #A for Auton
+    #        pass                 # <--- fix this
+    #    elif cmd == 'M': #M for Amp :0
+    #        return [5]
+    #    elif cmd == 'R': #R for Source ;0
+    #        return [9,10]
+    #    elif cmd == 'S': #S for Speaker 
+    #        return [3,4]
+    #    elif cmd == '':
+    #        return []
+    #elif Alliance == 'BLUE':
+    #    if cmd == 'A':
+    #        pass                 # <--- fix this
+    #    elif cmd == 'M':
+    #        return [6]
+    #    elif cmd == 'R':
+    #        return [1,2]
+    #    elif cmd == 'S':
+    #        return [7,8]
+    #    elif cmd == '':
+    #        return []
 
-def register_Hotspot(X, Y, Rot): #Used to acquire accurate values of sweetspots based on robots position
+def register_Hotspot(X, Y, HdgRad, Ctr): #Used to acquire accurate values of sweetspots based on robots position
 # X & Y are relateive to the field (world)
 # Rot is relative to NORTH
     if X == 999 or Y == 999: #Will be 999 before it reads its first tag
         return()
+    Rot=999
     subprocess.run(["sudo","mount","-o","remount","rw","/"])
     SSfile=open('Sweetspot.dat','a') 
     SSfile.write('{0:5.3f} {1:5.3f} {2:5.3f}\n'.format(float(X),float(Y),float(Rot)))
+    if Ctr == 1:
+        SSfile.write ('======================\n')
     SSfile.close
     subprocess.run(["sudo","mount","-o","remount","ro","/"])
     return ()
@@ -410,6 +479,7 @@ def BuildWorld (WX, WY, HdgRad, RefTag):
             BEARINGS[K][0] = -degrees(H2K)
             BEARINGS[K][1] = sqrt(deltaX**2 + deltaY**2)
 
+
 if __name__ == "__main__":
     if len(sys.argv) >= 2:
         configFile = sys.argv[1]
@@ -453,8 +523,10 @@ if __name__ == "__main__":
     output_stream = CameraServer.putVideo('Vision 2024', width, height)
 
     ##Initialization of network tables for Tags1-16 is now handled in the tag object construction. 
-    # This DS_tbl will be published by the Driver Station laptop in competition.
-    # For now, it's published by a Raspberry Pi.
+
+    # Robot programmers want everything, no filters. So this is only used to register hotspots.
+    ## This DS_tbl will be published by the Driver Station laptop in competition.
+    ## For now, it's published by a Raspberry Pi.
     DS_tbl = ntinst.getTable("DS")
     subDS  = DS_tbl.getStringTopic("Cmd").subscribe(' ') #Since we are only Reading in Driverstation entries, we Subscribe
     subAlliance = DS_tbl.getStringTopic("Alliance").subscribe(' ')
@@ -472,18 +544,20 @@ if __name__ == "__main__":
     Closest_Rng = Closest_tag.getDoubleTopic("Rng").publish()
     Closest_Hdg = Closest_tag.getDoubleTopic("Hdg").publish()
 
-    CamPos_tbl = ntinst.getTable("CamPos") #These are for the cameras field coordinates
+    CamPos_tbl = ntinst.getTable("CamPos") #These are for the camera's field coordinates
     pubCamWorldX = CamPos_tbl.getDoubleTopic("X").publish()
     pubCamWorldY = CamPos_tbl.getDoubleTopic("Y").publish()
+    pubCamWorldR = CamPos_tbl.getDoubleTopic("Rot").publish()
     pubCamTag_id =  CamPos_tbl.getDoubleTopic("Tag_ID").publish()
     
-     # wait for Drive Station
-    while Alliance not in ['RED','BLUE']:
-        Alliance = subAlliance.get()
-        time.sleep(0.1) #Delays program execution(Re-looping) by .1s
-    while current_cmd == 'none':
-        current_cmd = subDS.get('none')
-    print ("Alliance:",Alliance,"  Cmd:",current_cmd)
+    # Don't wait for Drive Station. The programmers want everything, all the time
+    ## wait for Drive Station
+    #while Alliance not in ['RED','BLUE']:
+    #    Alliance = subAlliance.get()
+    #    time.sleep(0.1) #Delays program execution(Re-looping) by .1s
+    #while current_cmd == 'none':
+    #    current_cmd = subDS.get('none')
+    #print ("Alliance:",Alliance,"  Cmd:",current_cmd)
 
     #Create 16 tag objects (This is an alternative way to the 48 lines of code up above)
     tags = []
@@ -503,7 +577,8 @@ if __name__ == "__main__":
         if current_cmd != cmd: #If the command has changed, update!
             cmd = current_cmd
             if cmd == "W":
-                register_Hotspot(WorldX, WorldY,-180)
+                Hotspot_Ctr = 10
+                #register_Hotspot(WorldX, WorldY,-180)
             else:
                 Tag_List = Set_Tag_List(cmd,Alliance)
 
@@ -538,8 +613,16 @@ if __name__ == "__main__":
                 WorldX,WorldY = rotate ((WorldX,WorldY),(TAG_LOCATION[r.tag_id][0],TAG_LOCATION[r.tag_id][1]),TAG_LOCATION[r.tag_id][3])
                 pubCamWorldX.set(WorldX) 
                 pubCamWorldY.set(WorldY) 
-                pubCamTag_id.set(r.tag_id)
+                # determine camera's rotation wrt NORTH
+                deltaX = TAG_LOCATION[r.tag_id][0] - WorldX
+                deltaY = TAG_LOCATION[r.tag_id][1] - WorldY
+                A2N = atan2(deltaY,deltaX) + HdgRad - pi/2
+                if A2N < -pi:
+                    A2N = A2N + 2*pi
+                print ("A2N: ",-degrees(A2N))
+                pubCamWorldR.set(-degrees(A2N))
 
+                pubCamTag_id.set(r.tag_id)
                 BEARINGS[r.tag_id][0] = round(Hdg,2)
                 BEARINGS[r.tag_id][1] = round(CamRange,2)
                 BuildWorld (WorldX, WorldY, HdgRad, r.tag_id) #Consider decreasing scope
@@ -549,7 +632,10 @@ if __name__ == "__main__":
                 print (' ')
                 pubHeadings.set(HEADING)
                 pubRanges.set(RANGE)
+                if Hotspot_Ctr > 0:
+                    register_Hotspot (WorldX, WorldY, HdgRad, Hotspot_Ctr)
+                    Hotspot_Ctr -= 1
 
         ClosestTag(tags,ID_to_Game_Element, Closest_ID, Closest_Rng, Closest_Hdg) #Currently only evaluates after all the detected april tags have been added to tables
         
-        #output_stream.putFrame(output_img)
+        output_stream.putFrame(output_img)
