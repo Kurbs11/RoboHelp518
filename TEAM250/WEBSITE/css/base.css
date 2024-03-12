@@ -21,3 +21,14 @@ li a{
 li a:hover {
 background-color: blue;
 }
+
+.logos {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+}
+
+.logo1 img{
+    max-height: 100px;
+}
