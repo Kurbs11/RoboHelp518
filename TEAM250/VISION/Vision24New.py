@@ -47,11 +47,11 @@ CORNERS   = np.array([[-4.0,  4.0, 0.0],   # Start at NW corner and proceed
                       [ 4.0,  4.0, 0.0],   # clockwise. This is the order
                       [ 4.0, -4.0, 0.0],   # returned by Detector.
                       [-4.0, -4.0, 0.0]])  
-# Sweetspot axes: Increasing X moves the sweetspot to the tag's left and camera's right. 
-# Increasing Y move the sweetspot up. Increasing Z moves the sweetspot forward from the tag
+# Hotspot axes: Increasing X moves the hotspot to the tag's left and camera's right. 
+# Increasing Y move the hotspot up. Increasing Z moves the hotspot forward from the tag
 # along the normal to the tag face.
-SWEETSPOT=np.array(([[12.0, 0.0, 72.0]])*17)
-SWEETSPOT=SWEETSPOT.reshape(17,3)
+HOTSPOT=np.array(([[12.0, 0.0, 72.0]])*17)
+HOTSPOT=HOTSPOT.reshape(17,3)
 
 # Hotspots identify places on the field the robot wants to know about. These can
 # be tags or spikes or something like a waypoint. In addition to location data
@@ -65,15 +65,16 @@ SWEETSPOT=SWEETSPOT.reshape(17,3)
 # Right now there are 32 Hotspots. The first 16 are for the tags, the rest are
 # for the spikes.
 
-HotSpots = np.array [[999.00, 999.00,999.00] #All in ID_to_Game_Element dictionary order (Many of these are minor offets from tag locations)
+#All in ID_to_Game_Element dictionary order
+HotSpots = np.array( [[999.00, 999.00,999.00]
 ,[583.29,  15.68, 150.00]
 ,[626.82,  40.79, 150.00]
-,[616.73, 208.17,  90.00]
-,[616.73, 230.42,  90.00]
+,[604.73, 208.17,  90.00]
+,[604.73, 230.42,  90.00]
 ,[590.77, 323.00,   0.00]
 ,[ 84.50, 323.00,   0.00]
-,[ 34.50, 206.42, -90.00]
-,[ 34.50, 184.17, -90.00]
+,[ 46.50, 206.42, -90.00]
+,[ 46.50, 184.17, -90.00]
 ,[  3.63,  28.79,-150.00]
 ,[ 47.15,   3.68,-150.00]
 ,[458.30, 152.19, 150.00]
@@ -82,7 +83,7 @@ HotSpots = np.array [[999.00, 999.00,999.00] #All in ID_to_Game_Element dictiona
 ,[209.48, 149.62, -90.00]
 ,[193.12, 171.10, -30.00]
 ,[172.34, 140.19,-150.00]
-,[116,275.64, 0] #0 Roatation (arbirary) for spikes
+,[116,275.64, 0]
 ,[116, 218.64, 0]
 ,[116, 161.64, 0]
 ,[326.6, 293.64, 0]
@@ -97,7 +98,8 @@ HotSpots = np.array [[999.00, 999.00,999.00] #All in ID_to_Game_Element dictiona
 ,[326.6, 227.64, 0]
 ,[326.6, 161.64, 0]
 ,[326.6, 95.64, 0]
-,[326.6, 29.64, 0]]
+,[326.6, 29.64, 0]])
+
 
 #Tag locations are all with respect to an origin in the red source zone
 TAG_LOCATION= [[999.0, 999.0, 999.0]
@@ -120,7 +122,7 @@ TAG_LOCATION= [[999.0, 999.0, 999.0]
 RED_SPIKES   =np.array([(528.0,161.64),(528.0,218.64),(528.0,275.64)])
 BLUE_SPIKES  =np.array([(114.0,161.64),(114.0,218.64),(114.0,275.64)])
 PURPLE_SPIKES=np.array([(326.0,29.64),(326.0,95.64),(326.0,161.64),(326.0,227.64),(326.0,293.64)]) #Centerline spikes
-BEARINGS=np.array([(999.0,999.0)]*17) #Will be added to closest function for offscreen tag detection
+BEARINGS=np.array([(999.0,999.0)]*33) #Will be added to closest function for offscreen tag detection
 ID_to_Game_Element = { #L/R Based on if camera is looking at the object
     1: "Blue Source Right",
     2: "Blue Source Left",
@@ -149,11 +151,12 @@ ID_to_Game_Element = { #L/R Based on if camera is looking at the object
     25: "Red Spike Left",
     26: "Red Spike Middle", 
     27: "Red Spike Right",
-    28: "Red Centerline Spike 1", #Sweetspots for centerline spikes may differ per alliance despite spikes physically being in same spot
+    28: "Red Centerline Spike 1", #Hotspots for centerline spikes may differ per alliance despite spikes physically being in same spot
     29: "Red Centerline Spike 2", #This is to allow for different strategies of approach like dragging all spikes onto your side
     30: "Red Centerline Spike 3",
     31: "Red Centerline Spike 4",
     32: "Red Centerline Spike 5",
+
 }
 
 
@@ -213,7 +216,7 @@ class Tag(object) :
     def update_Hdg(self,new_Hdg):
         self.Hdg = new_Hdg
         self.config_Hdg.set(self.Hdg)
-        #May need to add a new attribute for necessary rotation (once directly in sweetspot heading=0 so you can't tell your orientation)
+        #May need to add a new attribute for necessary rotation (once directly in hotspot heading=0 so you can't tell your orientation)
         self.config_Rot = self.tagtable.getDoubleTopic("Rot").publish()
         self.Rot = 361 #Degree representation (may need to be radians, also placeholder value)
     def update_Rot(self,new_Rot): 
@@ -256,7 +259,7 @@ def Set_Tag_List(cmd,Alliance): #Command is from Drivestation
     #    elif cmd == '':
     #        return []
 
-def register_Hotspot(X, Y, HdgRad, Ctr): #Used to acquire accurate values of sweetspots based on robots position
+def register_Hotspot(X, Y, HdgRad, Ctr): #Used to acquire accurate values of hotspots based on robots position
 # X & Y are relateive to the field (world)
 # Rot is relative to NORTH
     if X == 999 or Y == 999: #Will be 999 before it reads its first tag
@@ -452,32 +455,36 @@ def ClosestTag(tags, ID_to_Game_Element, Closest_ID, Closest_Rng, Closest_Hdg):
 
     return 
 
-HEADING  = [999.0]*17
-RANGE    = [999.0]*17
+HEADING  = [999.0]*33
+RANGE    = [999.0]*33
 
 """
 BuildWorld takes in the camera's World X & WorldY, its heading wrt to the
 reference tag and the reference tag id. It populates the BEARINGS table with the
 headings and ranges of the other 15 tags.
+THE SPIKES HAVE BEEN ADDED. This brings thr total to 32.
 """
 def BuildWorld (WX, WY, HdgRad, RefTag):
     # New method of knowing position with respect to all tags by only reading one
     # Calculate intermediate angles relative to X-axis. Adjust for heading later.
     # A2R: angle between RefTag and X-axis at camera
     # A2K: angle between Tag K and X-axis at camera
+
     deltaX = TAG_LOCATION[RefTag][0] - WX
     deltaY = TAG_LOCATION[RefTag][1] - WY
     A2R = atan2(deltaY,deltaX)
-    for K in range(1,17):
-        if K != RefTag:
-            deltaX = TAG_LOCATION[K][0] - WX
-            deltaY = TAG_LOCATION[K][1] - WY
-            A2K = atan2(deltaY,deltaX)
-            H2K = A2K - A2R - HdgRad
-            if H2K > pi:
-               H2K = H2K - 2*pi
-            BEARINGS[K][0] = -degrees(H2K)
-            BEARINGS[K][1] = sqrt(deltaX**2 + deltaY**2)
+
+    
+
+    for K in range(1,33):
+        deltaX = HotSpots[K][0] - WX
+        deltaY = HotSpots[K][1] - WY
+        A2K = atan2(deltaY,deltaX)
+        H2K = A2K - A2R - HdgRad
+        if H2K > pi:
+           H2K = H2K - 2*pi
+        BEARINGS[K][0] = -degrees(H2K)
+        BEARINGS[K][1] = sqrt(deltaX**2 + deltaY**2)
 
 
 if __name__ == "__main__":
@@ -490,7 +497,8 @@ if __name__ == "__main__":
 
     print ("TADA!")
     #IP='fauxbot'
-    IP='192.168.1.46'
+    IP='169.254.27.134'
+    #IP='192.168.1.46'
 
     width, height, USBcam_mtx, USBcam_dist, FudgeFactor, FudgeOffset = get_camera_parameters()
     CORNERS = (CORNERS - FudgeOffset) / FudgeFactor
@@ -559,7 +567,7 @@ if __name__ == "__main__":
     #    current_cmd = subDS.get('none')
     #print ("Alliance:",Alliance,"  Cmd:",current_cmd)
 
-    #Create 16 tag objects (This is an alternative way to the 48 lines of code up above)
+    #Create 32 tag objects (This is an alternative way to the 96 lines of code up above)
     tags = []
     for i in range(32): 
         current_tag = Tag(i+1, ntinst)
@@ -601,9 +609,9 @@ if __name__ == "__main__":
                 current_tag = tags[r.tag_id -1]
                 current_tag.update_Rng(CamRange) #now that update_Rng is a class method, the tag object's Rng variable gets updated
                 current_tag.update_Hdg(Hdg)
-                SWSPos[0]   = CamPos[0] - SWEETSPOT[r.tag_id][0] #X, Y, and Z Coordinates w/ respect to Sweetspot of interst
-                SWSPos[1]   = CamPos[1] - SWEETSPOT[r.tag_id][1]
-                SWSPos[2]   = CamPos[2] - SWEETSPOT[r.tag_id][2]
+                SWSPos[0]   = CamPos[0] - HOTSPOT[r.tag_id][0] #X, Y, and Z Coordinates w/ respect to Hotspot of interst
+                SWSPos[1]   = CamPos[1] - HOTSPOT[r.tag_id][1]
+                SWSPos[2]   = CamPos[2] - HOTSPOT[r.tag_id][2]
                 SWSRng      = sqrt(SWSPos[0]**2+SWSPos[2]**2)
                 SWSHdg      = atan2(SWSPos[0],SWSPos[2])*180/pi
                 #Also look into potentially making these Arrays just one
@@ -627,8 +635,13 @@ if __name__ == "__main__":
                 BEARINGS[r.tag_id][1] = round(CamRange,2)
                 BuildWorld (WorldX, WorldY, HdgRad, r.tag_id) #Consider decreasing scope
                 print('TAG HEADING   RANGE')
-                for i in range (1,17):
+                #This new part is updated displaying the bearings information in the network tables 
+                for i in range (1,33):
+                    tags[i].update_Rng(BEARINGS[i][1]) #The network table data associated with this hotspot (tag/spike) is changed to match bearings array 
+                    tags[i].update_Hdg(BEARINGS[i][0]) 
+                    tags[i].update_Rot(HotSpots[i][2])
                     print ('{0:2d} {1:8.2f} {2:8.2f}'.format(i,BEARINGS[i][0],BEARINGS[i][1]))
+
                 print (' ')
                 pubHeadings.set(HEADING)
                 pubRanges.set(RANGE)
