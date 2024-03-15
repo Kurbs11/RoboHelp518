@@ -6,3 +6,22 @@ body{
     background-color: aliceblue;
 }
 
+
+.titles{
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+}
+
+.schematic img{
+    max-height: 500px;
+    padding: 0px;
+    margin: 0px;
+}
+
+.practice_field img{
+    max-height: 500px;
+    padding: 0px;
+    margin: 0px;
+}
