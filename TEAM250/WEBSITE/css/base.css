@@ -1,9 +1,12 @@
 ul{
     list-style-type: none;
+    display: flex;
+    justify-content: space-between;
     margin: 0;
     padding: 0;
     overflow: hidden;
     background-color:rgb(106, 106, 250);
+    max-height: 100px;
 }
 
 li{
@@ -22,13 +25,19 @@ li a:hover {
 background-color: blue;
 }
 
+.navi{
+    display: flex;
+    align-items: center;
+}
+
 .logos {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px;
 }
 
 .logo1 img{
-    max-height: 100px;
+    max-height: 75px;
+    padding: 0px;
+    margin: 0px;
 }
