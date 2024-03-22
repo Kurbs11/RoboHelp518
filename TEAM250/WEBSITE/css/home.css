@@ -6,6 +6,11 @@ body{
     background-color: aliceblue;
 }
 
+.logo1 img{
+    max-height: 75px;
+    padding: 0px;
+    margin: 0px;
+}
 
 .titles{
     display: flex;

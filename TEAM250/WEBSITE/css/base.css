@@ -25,6 +25,10 @@ li a:hover {
 background-color: blue;
 }
 
+.top{
+    justify-content: space-around;
+}
+
 .navi{
     display: flex;
     align-items: center;
@@ -32,12 +36,6 @@ background-color: blue;
 
 .logos {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
     align-items: center;
-}
-
-.logo1 img{
-    max-height: 75px;
-    padding: 0px;
-    margin: 0px;
 }

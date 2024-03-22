@@ -6,6 +6,18 @@ body{
     background-color: aliceblue;
 }
 
+.logo1 img{
+    max-height: 75px;
+    padding: 0px;
+    margin: 0px;
+}
+
 .logo2 img{
     max-height: 100px;
+}
+
+#front{
+    text-align: center;
+    font-style: italic;
+    font-family:Georgia, 'Times New Roman', Times, serif;
 }
