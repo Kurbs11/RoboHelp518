@@ -1,4 +1,4 @@
-ul{
+.bar{
     list-style-type: none;
     display: flex;
     justify-content: space-between;
@@ -19,11 +19,11 @@ u2{
     max-height: 100px;
 }
 
-li{
+ul.bar li{
     float: left;
 }
 
-li a{
+ul.bar li a{
     display: block;
     color: yellow;
     text-align: center;
@@ -31,8 +31,8 @@ li a{
     text-decoration: wavy;
 }
 
-li a:hover {
-background-color: blue;
+.bar li a:hover {
+    background-color: blue;
 }
 
 .top{
