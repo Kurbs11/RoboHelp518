@@ -30,3 +30,12 @@ body{
     padding: 0px;
     margin: 0px;
 }
+
+#gallery_title{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid blue; /* Border properties */
+    border-radius: 10px; /* Adjust the radius to control roundness */
+    padding: 10px; /* Add padding to give space around the text */
+}
