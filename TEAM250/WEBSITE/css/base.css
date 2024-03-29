@@ -8,6 +8,16 @@ ul{
     background-color:rgb(106, 106, 250);
     max-height: 100px;
 }
+u2{
+    list-style-type: none;
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color:rgb(34, 34, 124);
+    max-height: 100px;
+}
 
 li{
     float: left;

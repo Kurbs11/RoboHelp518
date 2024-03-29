@@ -19,7 +19,12 @@ body{
     font-style: italic;
 }
 
-.links{
+.links1{
+    list-style-type: none;
+    
+}
+/* Test */
+.links2{ 
     list-style-type: none;
     
 }
