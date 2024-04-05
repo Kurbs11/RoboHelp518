@@ -7,14 +7,15 @@ body{
 }
 
 #about{
-    border-bottom: 3px solid purple;
+    border-bottom: 3px solid rgb(23, 0, 128);
     color: purple;
     text-align: center;
 }
 
+
 .summary{
     border: 2px solid;
-    border-color: white;
+    border-color: purple;
     margin: left;
     height: auto;
     overflow: auto;

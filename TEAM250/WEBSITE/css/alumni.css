@@ -1,0 +1,14 @@
+header{
+    background-color: aliceblue;
+}
+
+body{
+    background-color: aliceblue;
+}
+/* Note: we want to add more styling for the alumni page */
+#Volunteer{
+    display: flex;
+    padding: 10px;
+    width: 25%;
+    height: auto;
+}
