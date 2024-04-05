@@ -22,6 +22,24 @@ body{
     font-family:Georgia, 'Times New Roman', Times, serif;
 }
 
+.frontline{
+  display: flex;
+  padding: 10px;
+  justify-content: space-between;
+}
+
+.HVRC{
+  padding: 10px;
+}
+
+.NYTVRC{
+  padding: 10px;
+}
+
+
+
+
+
 * {box-sizing:border-box}
 
 /* Slideshow container */
@@ -29,12 +47,10 @@ body{
   max-width: 600px;
   position: relative;
   margin: auto;
+  padding: 10px;
+  float: left;
 }
 
-/* Hide the images by default
-.HVRCSlides {
-  display: none;
-} */
 
 /* Next & previous buttons */
 .prev, .next {
