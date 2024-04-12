@@ -17,14 +17,18 @@ body{
     justify-content: center;
     font-family: Georgia, 'Times New Roman', Times, serif;
     font-style: italic;
+    color: purple;
 }
 
-.links1{
-    list-style-type: none;
-    
+.links{
+    display: flex;
+    justify-content: center;
 }
-/* Test */
-.links2{ 
-    list-style-type: none;
-    
+
+.each-link{
+    font-size: 18px;
+}
+
+.each-link li{
+    margin-bottom: 10px;
 }
