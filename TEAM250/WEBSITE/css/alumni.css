@@ -11,12 +11,34 @@ body{
     margin: 0px;
 }
 
+#title{
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    display: flex;
+    justify-content: center;
+}
 
+.summary{
+    display: flex;
+    justify-content: center;
+}
 
 /* Note: we want to add more styling for the alumni page */
-#Volunteer{
+.Volunteer_imgs{
+    display: flex;
+    justify-content: center;
+    
+}
+
+#Volunteer_img1{
+    display: flex;
+    justify-content: center;
+    padding: 10px;
+    width: 30%;
+    height: auto;
+}
+
+.Volunteers{
     display: flex;
     padding: 10px;
-    width: 20%;
-    height: auto;
+    justify-content: space-around;
 }
