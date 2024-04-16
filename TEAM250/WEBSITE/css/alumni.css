@@ -40,5 +40,9 @@ body{
 .Volunteers{
     display: flex;
     padding: 10px;
-    justify-content: space-around;
+    flex-direction: column;
+}
+
+.v1{
+    font-family: Georgia, 'Times New Roman', Times, serif;
 }
