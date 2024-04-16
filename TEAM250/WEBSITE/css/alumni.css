@@ -37,6 +37,18 @@ body{
     height: auto;
 }
 
+.title_V{
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-style: italic;
+    text-align: center;
+    -webkit-text-stroke: 1px black;
+    text-shadow: 
+        -1px -1px 0 #87026c,  
+        1px -1px 0 #87026c,
+        -1px  1px 0 #87026c,
+        1px  1px 0 #87026c; /* Adjust the offsets and color as needed */
+}
+
 .Volunteers{
     display: flex;
     padding: 10px;
@@ -45,4 +57,9 @@ body{
 
 .v1{
     font-family: Georgia, 'Times New Roman', Times, serif;
+    display: flex;
+}
+
+.sections{
+    width: 50%;
 }
