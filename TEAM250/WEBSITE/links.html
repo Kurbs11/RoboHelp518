@@ -51,10 +51,32 @@
         </ul>
     </div>
 
+    <div style="display: flex; justify-content: center;">
+        <button id="show-hidden-image" style="font-family: Georgia, 'Times New Roman', Times, serif; background-color: aliceblue; border: 0;"></button>
+    </div>
+
+    <!-- Hint: the hidden button is above the "n" in the second "links" in the Note line -->
+
+    <p style="display: flex; justify-content:center;"> 
+        Note: Consider adding links to sponsor websites. Also, figure out why second row of links has a thinner bar.
+        p.s. There is an easter egg on this page. Try clicking around. ^v^
+    </p>
+
+
+    <div style="display: flex; justify-content: center;">
+        <img id= "the-logo" src="/TEAM250/RoboHelp518Logo.png" alt="THE-LOGO" style="display: none; width: 500px; height: auto;">
+    </div>
+
+    <script>
+        const showImageButton = document.getElementById("show-hidden-image");
+        const myImage = document.getElementById("the-logo"); 
+        showImageButton.addEventListener("click", () => { 
+            myImage.style.display = "block";
+        });
+    </script>
 
 </body>
 
-<p style="display: flex; justify-content:center;"> Note: Consider adding links to sponsor websites. Also, figure out why second row of links has a thinner bar.</p>
 
 
 
